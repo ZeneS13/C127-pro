@@ -1,33 +1,31 @@
-from time import time
 from bs4 import BeautifulSoup
-from selenium import webdriver
-import csv
+import requests
+import pandas as pd
 
-url= "https://en.wikipedia.org/wiki/List_of_brightest_stars_and_other_record_stars"
-browser= webdriver.Chrome("chromedriver.exe")
+START_URL = (
+    "https://en.wikipedia.org/wiki/List_of_brightest_stars_and_other_record_stars"
+)
+wiki = requests.get(START_URL)
+soup = BeautifulSoup(wiki.text, "html.parser")
+temp_list = []
+for tr in soup.find("table").find_all("tr"):
+    td = tr.find_all("td")
+    row = [i.text.rstrip() for i in td]
+    temp_list.append(row)
 
-browser.get(url)
+name = []
+distance = []
+mass = []
+radius = []
 
+for i in range(1, len(temp_list)):
+    name.append(temp_list[i][1])
+    distance.append(temp_list[i][3])
+    mass.append(temp_list[i][5])
+    radius.append(temp_list[i][6])
 
-def scrape():
-    headers= ["Proper Name", "Distance", "Mass", "Radius"]
-    star_data=[]
-    soup= BeautifulSoup(browser.page_source,"html.parser")
-    for tr_tag in soup.find_all("tr",attrs={"class","expo-planet"}):
-        t_tags= tr_tag.find_all("tr")
-        temp=[]
-        for index, t_tags in enumerate(t_tags):
-            if index==0:
-                temp.append(t_tags.find_all("a")[0].contents[0])
-            else:
-                try:
-                    temp.append(t_tags.contents[0])
-                except:
-                    temp.append("")
-        star_data.append(temp)
-    with open("scraper.csv","w") as f:
-        csv_w= csv.writer(f)
-        csv_w.writerow(headers)
-        csv_w.writerows(star_data)
-
-scrape()
+df = pd.DataFrame(
+    list(zip(name, distance, mass, radius)),
+    columns=["StarName", "Distance", "Mass", "Radius"],
+)
+df.to_csv("starInfo.csv")
